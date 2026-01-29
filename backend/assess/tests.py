@@ -35,3 +35,33 @@ class BaseRoutesTest(TestCase):
         
         response = self.client.post(url)
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_dataset_upload_success(self):
+        """
+        REQ-102: Verify dataset upload/verification happy path
+        """
+        url = reverse('data-root')
+        data = {
+            "data_url": "http://example.com/data.zip",
+            "data_token": "valid_token_123"
+        }
+        # Use format='json' to ensure it sends JSON content type
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("status", response.data)
+        self.assertEqual(response.data["status"], "verified")
+        self.assertIn("preview", response.data)
+        self.assertTrue(len(response.data["preview"]["classes"]) > 0)
+
+    def test_dataset_upload_missing_params(self):
+        """
+        REQ-102: Verify error handling for missing parameters
+        """
+        url = reverse('data-root')
+        data = {
+            "data_url": "http://example.com/data.zip"
+            # Missing token
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
