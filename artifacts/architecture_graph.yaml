@@ -1,0 +1,6 @@
+nodes:
+  REQ-000:
+    type: REQUIREMENT
+    name: Minimal Test
+    description: Test description
+edges: []
