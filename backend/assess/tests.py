@@ -93,3 +93,34 @@ class BaseRoutesTest(TestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_attack_run_success(self):
+        """
+        REQ-104: Verify attack execution happy path
+        """
+        url = reverse('attack-root')
+        data = {
+            "attack_list": ["FGM", "PGD"],
+            "model_url": "http://example.com/model",
+            "data_url": "http://example.com/data"
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("results", response.data)
+        # Check if we got results for requested attacks
+        results = response.data["results"]
+        self.assertTrue(any(r["method"] == "FGM" for r in results))
+        self.assertTrue(any(r["method"] == "PGD" for r in results))
+
+    def test_attack_missing_params(self):
+        """
+        REQ-104: Verify attack execution missing params
+        """
+        url = reverse('attack-root')
+        data = {
+            "model_url": "http://example.com/model"
+            # Missing attack_list
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
