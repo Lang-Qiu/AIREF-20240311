@@ -1,0 +1,4 @@
+FUNC-STORAGE-INIT:
+  related_req_id: REQ-101
+  path: E:/LQiu/AIREF/AIREF-20240311/backend/src/utils/storage.js
+  signature: ensureStorage()

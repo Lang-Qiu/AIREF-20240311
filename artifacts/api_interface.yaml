@@ -1,0 +1,4 @@
+API-ASSESS-HEALTH:
+  related_req_id: REQ-101
+  path: E:/LQiu/AIREF/AIREF-20240311/backend/src/api/assess/index.js
+  signature: GET /api/assess/health

@@ -1,0 +1,224 @@
+- id: REQ-000
+  name: AIREF 2024 后端适配
+  description: |
+    迁移并扩展 Master 后端以支持 2024 版前端的多模块评估平台。
+    涵盖认证、模型评估流程、异步任务调度及数据大屏统计。
+  type: infra
+  children:
+    - id: REQ-100
+      name: 评估流程模块 (Assess)
+      description: |
+        支持模型评估流程中的数据上传、预览与测试。
+        所属模块: Assess
+        对应前端: ModelAssess (Data/Model/Attack) 页面
+      type: infra
+      children:
+        - id: REQ-101
+          name: 基础路由与文件存储配置
+          description: |
+            配置 /api/assess 路由前缀及用户文件存储目录。
+            所属模块: Assess
+          type: infra
+          scenarios:
+            - name: 验证路由挂载
+              steps:
+                - 访问 /api/assess/health (需实现) 或检查路由配置
+              expectation:
+                - 路由可达
+            - name: 验证存储目录
+              steps:
+                - 检查 UserData 目录是否存在
+              expectation:
+                - 目录存在且可写
+
+        - id: REQ-102
+          name: 实现数据集预览接口
+          description: |
+            验证数据集有效性并返回预览图。
+            所属模块: Assess
+            对应前端: getTestResultOne
+          type: feature
+          scenarios:
+            - name: Happy Path - 预览成功
+              steps:
+                - POST /api/assess/data_preview with {data_url: "valid_path", token: "valid"}
+              expectation:
+                - HTTP 200
+                - response.body.status == 200
+                - response.body.data_pic 为非空 Base64 字符串
+            - name: Bad Path - 无效 Token
+              steps:
+                - POST /api/assess/data_preview with {token: "invalid"}
+              expectation:
+                - response.body.status != 200
+
+        - id: REQ-103
+          name: 实现模型结构预览接口
+          description: |
+            解析模型文件并返回结构可视化图。
+            所属模块: Assess
+            对应前端: getTestResultTwo
+          type: feature
+          scenarios:
+            - name: Happy Path - 解析成功
+              steps:
+                - POST /api/assess/model_preview with {model_url: "valid_onnx", token: "valid"}
+              expectation:
+                - HTTP 200
+                - response.body.status == 200
+                - response.body.model_pic 为非空 Base64 字符串
+
+        - id: REQ-104
+          name: 实现攻击效果快速测试接口
+          description: |
+            同步运行快速攻击测试，返回对比图。
+            所属模块: Assess
+            对应前端: getTestResultThree
+          type: feature
+          scenarios:
+            - name: Happy Path - 测试成功
+              steps:
+                - POST /api/assess/attack_test with {attack_list: ["FGM"], ...}
+              expectation:
+                - HTTP 200
+                - response.body.status == 200
+                - response.body.attack_pic 为非空 Base64 字符串
+
+    - id: REQ-200
+      name: 异步任务系统 (Task)
+      description: |
+        处理耗时的攻击任务，管理任务队列与状态。
+        所属模块: Task
+        对应前端: 任务提交与历史查看
+      type: infra
+      children:
+        - id: REQ-201
+          name: 任务状态持久化
+          description: |
+            创建 Tasks 表用于记录任务状态、参数与结果。
+            所属模块: Task
+          type: infra
+          scenarios:
+            - name: 检查任务表
+              steps:
+                - 检查数据库中是否存在 Tasks 表
+              expectation:
+                - 表存在
+                - 包含 task_id, status (pending/running/done/failed), result 字段
+
+        - id: REQ-202
+          name: 异步任务队列基础设施
+          description: |
+            初始化 Celery 或类似队列，配置 Worker。
+            所属模块: Task
+          type: infra
+          scenarios:
+            - name: 检查 Worker 状态
+              steps:
+                - 查询队列状态
+              expectation:
+                - Worker 在线且准备就绪
+
+        - id: REQ-203 
+          name: 实现攻击任务提交接口
+          description: |
+            提交完整攻击任务至队列，立即返回 Task ID。
+            所属模块: Task
+            对应前端: getSubmitResultThree
+          type: feature
+          scenarios:
+            - name: Happy Path - 提交成功
+              steps:
+                - POST /api/assess/submit with {attack_list: ["PGD"], ...}
+              expectation:
+                - HTTP 200
+                - response.body.status == 200
+                - response.body.task_id 为有效 UUID
+                - 数据库 Tasks 表新增一条 pending 记录
+
+    - id: REQ-300
+      name: 统计与大屏模块 (Stats)
+      description: |
+        提供仪表盘所需的统计数据。
+        所属模块: Stats
+        对应前端: Show 页面
+      type: infra
+      children:
+        - id: REQ-301
+          name: 实现仪表盘统计接口
+          description: |
+            聚合历史任务数据返回统计信息。
+            所属模块: Stats
+            对应前端: Show/index.vue
+          type: feature
+          scenarios:
+            - name: Happy Path - 获取统计数据
+              steps:
+                - GET /api/stats/dashboard
+              expectation:
+                - HTTP 200
+                - response.body 包含 total_models, attack_logs 数组
+    - id: REQ-400
+      name: 认证模块 (Auth)
+      description: |
+        用户身份认证与会话管理。
+        所属模块: Auth
+        对应前端: Login/Register 页面
+      type: infra
+      children:
+        - id: REQ-401
+          name: 用户表结构初始化
+          description: |
+            创建或确认 UserInfo 表结构，支持扩展字段。
+            所属模块: Auth
+          type: infra
+          scenarios:
+            - name: 检查用户表
+              steps:
+                - 检查数据库中是否存在 UserInfo 表
+              expectation:
+                - 表存在
+                - 包含 username, password (加密), token 字段
+
+        - id: REQ-402
+          name: 实现用户注册接口
+          description: |
+            处理用户注册请求。
+            所属模块: Auth
+            对应前端: /auth/register/
+          type: feature
+          scenarios:
+            - name: Happy Path - 注册成功
+              steps:
+                - POST /auth/register/ with {username: "newuser", password: "encrypted_pwd"}
+              expectation:
+                - HTTP 200
+                - response.body.status == true
+                - 数据库中新增一条用户记录
+            - name: Bad Path - 用户名已存在
+              steps:
+                - POST /auth/register/ with {username: "existing_user", password: "pwd"}
+              expectation:
+                - response.body.status == false
+                - response.body.data 包含 "用户名已被注册"
+            
+        - id: REQ-403
+          name: 实现用户登录接口
+          description: |
+            验证用户凭证并发放 Token。
+            所属模块: Auth
+            对应前端: /auth/login/
+          type: feature
+          scenarios:
+            - name: Happy Path - 登录成功
+              steps:
+                - POST /auth/login/ with {username: "valid_user", password: "valid_pwd"}
+              expectation:
+                - HTTP 200
+                - response.body.status == 200
+                - response.body 包含 token 和 user_id
+            - name: Bad Path - 密码错误
+              steps:
+                - POST /auth/login/ with {username: "valid_user", password: "wrong_pwd"}
+              expectation:
+                - response.body.status == false
