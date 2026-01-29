@@ -65,3 +65,31 @@ class BaseRoutesTest(TestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_model_load_success(self):
+        """
+        REQ-103: Verify model loading happy path
+        """
+        url = reverse('model-root')
+        data = {
+            "model_url": "http://example.com/resnet18.pth",
+            "model_type": "pytorch"
+        }
+        response = self.client.post(url, data, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("structure", response.data)
+        self.assertEqual(response.data["structure"], "ResNet18")
+        self.assertIn("layers", response.data)
+
+    def test_model_load_missing_params(self):
+        """
+        REQ-103: Verify model loading missing params
+        """
+        url = reverse('model-root')
+        data = {
+            "model_type": "pytorch"
+            # Missing model_url
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

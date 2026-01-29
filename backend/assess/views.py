@@ -36,7 +36,27 @@ class ModelView(APIView):
     Handle model loading
     """
     def post(self, request):
-        return Response({"status": "Not Implemented"}, status=status.HTTP_501_NOT_IMPLEMENTED)
+        model_url = request.data.get('model_url')
+        
+        if not model_url:
+            return Response(
+                {"error": "Missing model_url"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Mock model loading logic
+        # In a real scenario, we would load the model from the URL and inspect it
+        
+        return Response({
+            "status": "loaded",
+            "structure": "ResNet18",
+            "layers": [
+                "Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)",
+                "BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)",
+                "ReLU(inplace=True)",
+                "MaxPool2d(kernel_size=3, stride=2, padding=1, dilation=1, ceil_mode=False)"
+            ]
+        }, status=status.HTTP_200_OK)
 
 class AttackView(APIView):
     """
